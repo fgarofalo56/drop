@@ -1,0 +1,172 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "autoSetAdminAccount": {
+            "metadata": {
+                "comments": "Auto Set the required SQL Admin account.  Defualt is true"
+            },
+            "value": true
+        },
+        "adminUsername": {
+            "metadata": {
+                "comments": "Set SQL Auth admin account if you are not auto setting it, cannot use reserved accounts like: admin, sys, dbo, master"
+            },
+            "value": ""
+        },
+        "adminPassword": {
+            "metadata": {
+                "comments": "Set SQL Auth admin password if you are not auto setting it"
+            },
+            "value": ""
+        },
+        "serverName": {
+            "metadata": {
+                "comments": "SQL TDS Endpoint Name - Logical Server Name for SQL DBs."
+            },
+            "value": "dw-sqlsrv"
+        },
+        "serverADAdminGroup": {
+            "metadata": {
+                "comments": "AAD admin group name, this is the group used for AAD admins of your logical server."
+            },
+            "value": "Microsoft-AzureSQL-Admins"
+        },
+        "serverADAdminSID": {
+            "metadata": {
+                "comments": "SID for AAD group you will use as the AAD SQL Admin. This can be found via AAD or PowerShell"
+            },
+            "value": "d7184cdf-4892-44f9-8f64-9fe3325ac547"
+        },
+        "databases": {
+            "metadata": {
+                "comments": "Create and Set Tier of Multiple Databases supply a database name and set the Sku settings for the tier of that named database "
+            },
+            "value": [
+                {
+                    "databaseName": "enter database name",
+                    "databaseSku": {
+                        "name": "DW200",
+                        "tier": "DataWarehouse",
+                        "family": "",
+                        "capacity": ""
+                    },
+                    "dbCollation": "SQL_Latin1_General_CP1_CI_AS"
+                }
+            ]
+        },
+        "createFirewallAllServices": {
+            "metadata": {
+                "comments": "Setup Firewall Rule to Allow access from all Azure services: true/false"
+            },
+            "value": true
+        },
+        "CreateVNetFirewall": {
+            "metadata": {
+                "comments": "Setup VNetFirewall Rule: true/false"
+            },
+            "value": false
+        },
+        "vNetRule": {
+            "metadata": {
+                "comments": "vNet Service end point, enter values for each vNet firewall rule you want to create. Provide: vNetResourceGroup, vNetName, vNetSubNetName for each rule to create. "
+            },
+            "value": [
+                {
+                    "subscriptionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                    "vNetResourceGroup": "RG Name for vNet",
+                    "vNetName": "VNetName",
+                    "vNetSubNetName": "SubNet Name"
+                }
+            ]
+        },
+        "CreateFirewallRangeRule": {
+            "metadata": {
+                "comments": "Setup Firewall Range Rule: true/false"
+            },
+            "value": false
+        },
+        "FirewallRangeRule": {
+            "metadata": {
+                "comments": "Firewall Range rule, create StartIpAddress and EndIpAddress for each range rule "
+            },
+            "value": [
+                {
+                    "Name": "Enter Name for Firewall Range Rule",
+                    "StartIp": "xxx.xxx.xxx.xxx",
+                    "EndIp": "xxx.xxx.xxx.xxx"
+                }
+            ]
+        },
+        "createLogAnalyticsWorkspace": {
+            "metadata": {
+                "comments": "Create the Log Anlytic's Workspace: true/false"
+            },
+            "value": false
+        },
+        "LogAnalyticsWorkspaceResourceGroup": {
+            "metadata": {
+                "comments": "Resource Group name for an existing Log Analytics Workspace, if you are not creating one with this template"
+            },
+            "value": "SIO-BI"
+        },
+        "LogAnalyticsWorkspaceName": {
+            "metadata": {
+                "comments": "Log Analytics Workspace name for an existing Workspace, or the name of your new Workspace if createLogAnalyticsWorkspace is set to true"
+            },
+            "value": "LogAnalyticsWorkspaceSQLDB"
+        },
+        "LogAnalyticsServicetier": {
+            "metadata": {
+                "description": "Set Log Analytics Service tier: Free, Standalone, or PerNode"
+            },
+            "value": "Standalone"
+        },
+        "LogAnalyticsDataRetention": {
+            "metadata": {
+                "description": "Number of days of retention. Free plans can only have 7 days, Standalone and OMS plans include 30 days for free"
+            },
+            "value": 60
+        },
+        "diagnosticName": {
+            "metadata": {
+                "description": "Diagnotics name for Azure SQL DB diagnotics to Log Analytics"
+            },
+            "value": "SQLDW-Diag"
+        },
+        "enableAlertPolicies": {
+            "metadata": {
+                "description": "Enable Alert Policies: true/false, this uses Azure SQL DB adv. threat detection to email alerts."
+            },
+            "value": true
+        },
+        "emailAddresses": {
+            "metadata": {
+                "description": "Threat Detection: Emails addresses to enable the send alerts to "
+            },
+            "value": [
+                "xxxxxxx@xxxxxxxx.com"
+            ]
+        },
+        "createStorageAccount": {
+            "metadata": {
+                "description": "Create Storage Account for Auditing, if not providing one: true/false"
+            },
+            "value": false
+        },
+        "storageName": {
+            "metadata": {
+                "description": "Name for the new Storage Account, or Name of the Existing Storage Account to use"
+            },
+            "value": "sqldwstore",
+            "minLength": 1,
+            "maxLength": 11
+        },
+        "paramStorageType": {
+            "metadata": {
+                "description": "Storage Account Type for the new Storage Account to be used for auditing"
+            },
+            "value": "Standard_LRS"
+        }
+    }
+}
