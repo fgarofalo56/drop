@@ -1,0 +1,138 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "StorageAccountName": {
+            "type": "string"
+        },
+        "AccountType": {
+            "type": "string",
+            "defaultValue": "Standard_ZRS",
+            "metadata": {
+                "comments": "LRS: Locally-redundant storage - Data is replicated within a single storage scale unit , ZRS: Zone-redundant storage - Data is replicated synchronously across three availability zones, GRS: Geo-redundant storage -Cross-regional replication to protect against region-wide unavailability, RAGRS: Read-access geo-redundant storage - Cross-regional replication with read access to the replica"
+            },
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_ZRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS",
+                "Premium_ZRS"
+            ]
+        },
+        "ContainerName": {
+            "type": "string",
+            "defaultValue": "latest"
+        },
+        "CreateVNetFirewall": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "vNetRule": {
+            "type": "array"
+        },
+        "CreateIpFirewallRule": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "IpFirewallRule": {
+            "type": "array"
+        },
+        "FirewallExceptions": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "virtualNetworkRules": {
+            "copy": [
+                {
+                    "name": "vNetLoop",
+                    "count": "[length(parameters('vNetRule'))]",
+                    "input": {
+                        "id": "[resourceId(subscription().subscriptionId, parameters('vNetRule')[copyIndex('vNetLoop')].vNetResourceGroup, 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetRule')[copyIndex('vNetLoop')].vNetName, parameters('vNetRule')[copyIndex('vNetLoop')].vNetSubNetName)]",
+                        "action": "Allow",
+                        "state": "succeeded"
+                    }
+                }
+            ]
+        },
+        "ipRules": {
+            "copy": [
+                {
+                    "name": "IPLoop",
+                    "count": "[length(parameters('IpFirewallRule'))]",
+                    "input": {
+                        "value": "[parameters('IpFirewallRule')[copyIndex('IPLoop')]]",
+                        "action": "Allow"
+                    }
+                }
+            ]
+        },
+        "varStorageName": "[concat(toLower(parameters('StorageAccountName')), uniqueString(resourceGroup().id))]",
+        "StorageAccountPrefix": "[if(greater(length(variables('varStorageName')),24), substring(variables('varStorageName'),0,23),variables('varStorageName'))]"
+    },
+
+    "resources": [
+        {
+            "apiVersion": "2019-06-01",
+            "name": "[variables('StorageAccountPrefix')]",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "[parameters('AccountType')]",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "isHnsEnabled": true,
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot",
+                "networkAcls": {
+                    "bypass": "[parameters('FirewallExceptions')]",
+                    "virtualNetworkRules": "[if(parameters('CreateVNetFirewall'), variables('virtualNetworkRules').vNetLoop,'')]",
+                    "ipRules": "[if(parameters('CreateIpFirewallRule'), variables('ipRules').IPLoop,'')]",
+                    "defaultAction": "Deny"
+                }
+            },
+            "dependsOn": [
+            ],
+            "resources": [
+
+                {
+                    "comments": "Create Storage account Containers",
+                    "type": "blobServices/containers",
+                    "name": "[concat('default/', parameters('ContainerName'))]",
+                    "dependsOn": [
+                        "[variables('StorageAccountPrefix')]"
+                    ],
+                    "apiVersion": "2019-06-01",
+                    "properties": {
+                        "publicAccess": "Container"
+                    }
+                }
+            ]
+        }
+
+    ]
+}

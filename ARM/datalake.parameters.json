@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "StorageAccountName": {
+            "metadata": {
+                "comments": "Names Storage Account - Data Lake"
+            },
+            "value": "mdwdatalake"
+        },
+        "ContainerName": {
+            "metadata": {
+                "comments": "Names of Storage Account Container to Create"
+            },
+            "value": "xml-stg"
+        },
+        "AccountType": {
+            "metadata": {
+                "comments": "Storage account type: Standard_LRS, Standard_GRS, Standard_RAGRS"
+            },
+            "value": "Standard_RAGRS"
+        },
+        "CreateVNetFirewall": {
+            "metadata": {
+                "comments": "Setup VNetFirewall Rule: true/false"
+            },
+            "value": true
+        },
+        "vNetRule": {
+            "metadata": {
+                "comments": "vNet Service end point, enter values for each firewall rule to create provide: vNetResourceGroup, vNetName, vNetSubNetName for each rule to create. The vNet/subnet needs to have storage service endpoint enabled. "
+            },
+            "value": [
+                {
+                    "vNetResourceGroup": "demo-core-vnet",
+                    "vNetName": "demo-core-vnet",
+                    "vNetSubNetName": "default"
+                }
+            ]
+        },
+        "CreateIpFirewallRule": {
+            "metadata": {
+                "comments": "Create IP Firewall Rule: true/false"
+            },
+            "value": false
+        },
+        "IpFirewallRule": {
+            "metadata": {
+                "comments": "List of IP addresses for additional IP firewall rules. Separated by a comma"
+            },
+            "value": [
+                "xx.xxx.xx.xx",
+                "xx.xx.xx.x/xx",
+                "xxx.xx.xxx.xxx"
+            ]
+        },
+        "FirewallExceptions": {
+            "metadata": {
+                "comments": "Firewall Exception Options you can use any one of the following as a single string:  Logging, Metrics, AzureServices"
+            },
+            "value": "Logging, Metrics, AzureServices"
+        }
+    }
+}

@@ -1,0 +1,172 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "StorageAccountName": {
+            "type": "string"
+        },
+        "AccountType": {
+            "type": "string",
+            "defaultValue": "Standard_ZRS",
+            "metadata": {
+                "comments": "LRS: Locally-redundant storage - Data is replicated within a single storage scale unit , ZRS: Zone-redundant storage - Data is replicated synchronously across three availability zones, GRS: Geo-redundant storage -Cross-regional replication to protect against region-wide unavailability, RAGRS: Read-access geo-redundant storage - Cross-regional replication with read access to the replica"
+            },
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_ZRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS",
+                "Premium_ZRS"
+            ]
+        },
+        "CreateBlobContainer": {
+            "type": "bool"
+        },
+        "ContainerName": {
+            "type": "string"
+        },
+        "CreateFileShare": {
+            "type": "bool"
+        },
+        "FileShareName": {
+            "type": "string"
+        },
+        "FileShareQuota": {
+            "type": "int",
+            "defaultValue": 5120
+        },
+
+        "CreateVNetFirewall": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "vNetRule": {
+            "type": "array"
+        },
+        "CreateIpFirewallRule": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "IpFirewallRule": {
+            "type": "array"
+        },
+        "FirewallExceptions": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "varStorageName": "[concat(toLower(parameters('StorageAccountName')), uniqueString(resourceGroup().id))]",
+        "StorageAccountPrefix": "[if(greater(length(variables('varStorageName')),24), substring(variables('varStorageName'),0,23),variables('varStorageName'))]",
+        "virtualNetworkRules": {
+            "copy": [
+                {
+                    "name": "vNetLoop",
+                    "count": "[length(parameters('vNetRule'))]",
+                    "input": {
+                        "id": "[resourceId(subscription().subscriptionId, parameters('vNetRule')[copyIndex('vNetLoop')].vNetResourceGroup, 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetRule')[copyIndex('vNetLoop')].vNetName, parameters('vNetRule')[copyIndex('vNetLoop')].vNetSubNetName)]",
+                        "action": "Allow",
+                        "state": "succeeded"
+                    }
+                }
+            ]
+        },
+        "ipRules": {
+            "copy": [
+                {
+                    "name": "IPLoop",
+                    "count": "[length(parameters('IpFirewallRule'))]",
+                    "input": {
+                        "value": "[parameters('IpFirewallRule')[copyIndex('IPLoop')]]",
+                        "action": "Allow"
+                    }
+                }
+            ]
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2019-06-01",
+            "name": "[variables('StorageAccountPrefix')]",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "[parameters('AccountType')]"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "blob": {
+                            "enabled": true
+                        },
+                        "file": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "networkAcls": {
+                    "bypass": "[parameters('FirewallExceptions')]",
+                    "virtualNetworkRules": "[if(parameters('CreateVNetFirewall'), variables('virtualNetworkRules').vNetLoop,'')]",
+                    "ipRules": "[if(parameters('CreateIpFirewallRule'), variables('ipRules').IPLoop,'')]",
+                    "defaultAction": "Deny"
+                }
+            },
+            "dependsOn": [
+            ],
+            "resources": [
+                {
+                    "comments": "Create Storage account Containers",
+                    "condition": "[parameters('CreateBlobContainer')]",
+                    "type": "blobServices/containers",
+                    "name": "[concat('default/', parameters('ContainerName'))]",
+                    "dependsOn": [
+                        "[variables('StorageAccountPrefix')]"
+                    ],
+                    "apiVersion": "2019-04-01",
+                    "properties": {
+                        "publicAccess": "Blob"
+                    }
+                },
+                {
+                    "comments": "Create File Share",
+                    "type": "Microsoft.Storage/storageAccounts/fileServices",
+                    "condition": "[parameters('CreateFileShare')]",
+                    "apiVersion": "2019-06-01",
+                    "name": "[concat(variables('StorageAccountPrefix'), '/default')]",
+                    "dependsOn": [
+                         "[variables('StorageAccountPrefix')]"
+                    ],
+                    "properties": {
+                        "cors": {
+                            "corsRules": []
+                        }
+                    },
+                    "resources": [
+                        {
+                            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+                            "apiVersion": "2019-06-01",
+                            "name": "[concat(variables('StorageAccountPrefix'), '/default/', parameters('FileShareName'))]",
+                            "dependsOn": [
+                                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('StorageAccountPrefix'), 'default')]"
+                            ],
+                            "properties": {
+                                "shareQuota": "[parameters('FileShareQuota')]"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

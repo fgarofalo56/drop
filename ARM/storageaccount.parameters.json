@@ -1,0 +1,88 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "StorageAccountName": {
+            "metadata": {
+                "description": "Name for the new Storage Account, or Name of the Existing Storage Account to use"
+            },
+            "value": "entername",
+            "minLength": 1,
+            "maxLength": 11
+        },
+        "CreateBlobContainer": {
+            "value": false
+        },
+        "ContainerName": {
+            "metadata": {
+                "comments": "Names of Storage Account Container to Create"
+            },
+            "value": "latest"
+        },
+        "CreateFileShare": {
+            "value": false
+        },
+        "FileShareName": {
+            "metadata": {
+                "comments": "Name of File Share"
+            },
+            "value": "entername"
+        },
+        "AccountType": {
+            "metadata": {
+                "comments": "Storage account type: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS, Premium_LRS, Premium_ZRS"
+            },
+            "value": "Standard_LRS"
+        },
+        "CreateVNetFirewall": {
+            "metadata": {
+                "comments": "Setup VNetFirewall Rule: true/false"
+            },
+            "value": false
+        },
+        "vNetRule": {
+            "metadata": {
+                "comments": "vNet Service end point, enter values for each firewall rule to create provide: vNetResourceGroup, vNetName, vNetSubNetName for each rule to create. "
+            },
+            "value": [
+                {
+                    "vNetResourceGroup": "Enter Resource Group Name of Vnet",
+                    "vNetName": "Enter vNet Name",
+                    "vNetSubNetName": "Enter subNet Name"
+                },
+                {
+                    "vNetResourceGroup": "Enter Resource Group Name of Vnet",
+                    "vNetName": "Enter vNet Name",
+                    "vNetSubNetName": "Enter subNet Name"
+                },
+                {
+                    "vNetResourceGroup": "Enter Resource Group Name of Vnet",
+                    "vNetName": "Enter vNet Name",
+                    "vNetSubNetName": "Enter subNet Name"
+                }
+            ]
+        },
+        "CreateIpFirewallRule": {
+            "metadata": {
+                "comments": "Create IP Firewall Rule: true/false"
+            },
+            "value": false
+        },
+        "IpFirewallRule": {
+            "metadata": {
+                "comments": "List of IP addresses for additional IP firewall rules."
+            },
+            "value": [
+                "xx.xxx.xx.xx",
+                "xx.xx.xx.x/xx",
+                "xxx.xx.xxx.xxx"
+            ]
+        },
+        "FirewallExceptions": {
+            "metadata": {
+                "comments": "Firewall Exception Options you can use any one of the following as a single string:  Logging, Metrics, AzureServices"
+            },
+            "value": "Logging, Metrics, AzureServices"
+        }
+    }
+}
