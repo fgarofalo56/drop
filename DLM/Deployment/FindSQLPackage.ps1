@@ -488,3 +488,5 @@ function Get-SQLPackagePath
   
     return $sqlPackage
 }
+
+Get-SqlPackageOnTargetMachine

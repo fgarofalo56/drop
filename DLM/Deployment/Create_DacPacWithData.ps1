@@ -1,8 +1,13 @@
 #Reference Docs: https://docs.microsoft.com/en-us/sql/tools/sqlpackage/sqlpackage-extract?view=sql-server-ver15
+
+
+#Script Designed to Log into Azure with your Creds and pull your SQL DB username and password from KeyVault.  This is to keep from storing creds in plain text
+Login-AzAccount
+
 $sourceSQLserver        = '<Enter Source SQL Server>'
 $sourceDatabase         = '<Enter Source DB Name>'
-$sourceUser             = "<Enter Source SQL Ser User Name"
-$sourceUserPasssword    = '<Enter SQL Auth Password >' 
+$sourceUser             = Get-AzKeyVaultSecret -VaultName '<Enter KeyVault Name>' -Name '<Enter Secret Name for your UserName>' -AsPlainText
+$sourceUserPasssword    = Get-AzKeyVaultSecret -VaultName '<Enter KeyVault Name>' -Name '<Enter Secret Name for SQL Auth Password>' -AsPlainText
 $workingPath            = 'C:\temp\sqlpackage'
 #Make sure to use a tic mark ` befor any spaces in your package path
 $sqlpackagePath         = 'C:\Program` Files\Microsoft` SQL` Server\150\DAC\bin'
