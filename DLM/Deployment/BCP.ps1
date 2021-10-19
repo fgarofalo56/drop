@@ -1,9 +1,9 @@
-#Refrance Links:
+#Reference Links:
 # https://docs.microsoft.com/en-us/sql/relational-databases/import-export/import-and-export-bulk-data-by-using-the-bcp-utility-sql-server?view=sql-server-ver15
 # https://docs.microsoft.com/en-us/sql/tools/bcp-utility?view=sql-server-ver15
 
-$bpcPath    = 'C:\Program` Files\Microsoft` SQL` Server\110\Tools\Binn'
-$bpc        = "$bpcPath\bcp.exe"
+$bcpPath    = 'C:\Program` Files\Microsoft` SQL` Server\110\Tools\Binn'
+$bcp        = "$bcpPath\bcp.exe"
 
 
 $targetSQLServer        = '<Enter Target Server>'
@@ -20,6 +20,6 @@ ForEach($dir in (dir $workingPath))
      $fileName  = $file.Name
      $filePath  = $file.FullName
      $parms     = "`"$tableName`" IN `"$filePath`" -S `"$targetSQLServer`" -d `"$targetDatabase`" -U `"$targetUser`" -P `"$targetUserPasssword`" -n"
-    Invoke-Expression -Command "$bpc $parms"
+    Invoke-Expression -Command "$bcp $parms"
  }
 }
