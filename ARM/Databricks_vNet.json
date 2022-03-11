@@ -1,0 +1,206 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "workspaceName": {
+            "type": "string"
+        },
+        "tier": {
+            "defaultValue": "premium",
+            "type": "string"
+        },
+        "tagValues": {
+            "type": "object"
+        },
+        "enableNoPublicIp": {
+            "type": "bool"
+        },
+        "vnetName": {
+            "type": "string"
+        },
+        "vnetRG": {
+            "type": "string"
+        },
+        "vnetId": {
+            "type": "string"
+        },
+        "publicSubnetName": {
+            "type": "string"
+        },
+        "publicSubnetCIDR": {
+            "type": "string"
+        },
+        "privateSubnetName": {
+            "type": "string"
+        },
+        "privateSubnetCIDR": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "managedResourceGroupName": "[concat('databricks-rg-', parameters('workspaceName'), '-', uniqueString(parameters('workspaceName'), resourceGroup().id))]",
+        "managedResourceGroupId": "[concat(subscription().id, '/resourceGroups/', variables('managedResourceGroupName'))]",
+        "nsgName": "[concat('databricksnsg', uniqueString(parameters('workspaceName')))]",
+        "nsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-04-01",
+            "location": "[parameters('location')]",
+            "name": "[parameters('workspaceName')]",
+            "sku": {
+                "name": "[parameters('tier')]"
+            },
+            "comments": "Please do not use an existing resource group for ManagedResourceGroupId.",
+            "properties": {
+                "ManagedResourceGroupId": "[variables('managedResourceGroupId')]",
+                "parameters": {
+                    "enableNoPublicIp": {
+                        "value": "[parameters('enableNoPublicIp')]"
+                    },
+                    "customVirtualNetworkId": {
+                        "value": "[parameters('vnetId')]"
+                    },
+                    "customPublicSubnetName": {
+                        "value": "[parameters('publicSubnetName')]"
+                    },
+                    "customPrivateSubnetName": {
+                        "value": "[parameters('privateSubnetName')]"
+                    }
+                }
+            },
+            "type": "Microsoft.Databricks/workspaces",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+            ],
+            "tags": "[parameters('tagValues')]"
+        },
+
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-06-01",
+            "name": "[concat(parameters('vnetName'),'/',parameters('publicSubnetName'))]",
+
+            "location": "eastus",
+            "properties": {
+                "addressPrefix": "[parameters('publicSubnetCIDR')]",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('nsgName'))]"
+                },
+                "delegations": [
+                    {
+                        "name": "[concat('databricks-del-', uniqueString(parameters('publicSubnetName')))]",
+                        "properties": {
+                            "serviceName": "Microsoft.Databricks/workspaces"
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+            ]
+        },
+     {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-06-01",
+            "name": "[concat(parameters('vnetName'),'/',parameters('privateSubnetName'))]",
+            "location": "eastus",
+            "dependsOn": [
+                "[parameters('publicSubnetName')]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+            ],
+            "properties": {
+                "addressPrefix": "[parameters('privateSubnetCIDR')]",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('nsgName'))]"
+                },
+                "delegations": [
+                    {
+                        "name": "[concat('databricks-del-', uniqueString(parameters('privateSubnetName')))]",
+                        "properties": {
+                            "serviceName": "Microsoft.Databricks/workspaces"
+                        }
+                    }
+                ]
+            }
+        },
+
+
+
+   
+
+        {
+            "apiVersion": "2019-06-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[parameters('location')]",
+            "name": "[variables('nsgName')]"
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "nestedTemplate",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+            ],
+            "resourceGroup": "[parameters('vnetRG')]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2019-06-01",
+                            "type": "Microsoft.Network/virtualNetworks/subnets",
+                            "name": "[concat(parameters('vnetName'), '/', parameters('publicSubnetName'))]",
+                            "location": "[parameters('location')]",
+                            "properties": {
+                                "addressPrefix": "[parameters('publicSubnetCIDR')]",
+                                "networkSecurityGroup": {
+                                    "id": "[variables('nsgId')]"
+                                },
+                                "delegations": [
+                                    {
+                                        "name": "[concat('databricks-del-', uniqueString(parameters('publicSubnetName')))]",
+                                        "properties": {
+                                            "serviceName": "Microsoft.Databricks/workspaces"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "apiVersion": "2019-06-01",
+                            "type": "Microsoft.Network/virtualNetworks/subnets",
+                            "name": "[concat(parameters('vnetName'), '/', parameters('privateSubnetName'))]",
+                            "location": "[parameters('location')]",
+                            "dependsOn": [
+                                "[concat('Microsoft.Network/virtualNetworks/', parameters('vnetName'), '/subnets/', parameters('publicSubnetName'))]"
+                            ],
+                            "properties": {
+                                "addressPrefix": "[parameters('privateSubnetCIDR')]",
+                                "networkSecurityGroup": {
+                                    "id": "[variables('nsgId')]"
+                                },
+                                "delegations": [
+                                    {
+                                        "name": "[concat('databricks-del-', uniqueString(parameters('privateSubnetName')))]",
+                                        "properties": {
+                                            "serviceName": "Microsoft.Databricks/workspaces"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "parameters": {}
+            }
+        }
+    ]
+}

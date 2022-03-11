@@ -1,0 +1,83 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspaceName": {
+            "metadata": {
+                "comments": "Names of your Databricks Workspace"
+            },
+            "value": "enterworkspacename"
+        },
+        "location": {
+            "metadata": {
+                "comments": "Azure Region Location for your DB Workspace"
+            },
+            
+            "value": "eastus"
+        },
+        "tier": {
+            "metadata": {
+                "comments": "Workspace Tier"
+            },
+            "value": "premium"
+        },
+        "tagValues": {
+            "metadata": {
+                "comments": "DB Workspace Tags"
+            },
+            "value": {
+                "TAG1": "TAG1 Info",
+                "TAG2": "TAG2 Info",
+                "TAG3": "TAG3 INfo"
+            }
+        },
+        "enableNoPublicIp": {
+            "metadata": {
+                "comments": "Enable secure cluster: true is for secure cluster, no public IP"
+            },
+            "value": true
+        },
+        "vnetName": {
+            "metadata": {
+                "comments": "Name of your Existing vNet that will be used for vNet injected DB workspace"
+            },
+            "value": "enterVnetName"
+        },
+        "vnetRG": {
+            "metadata": {
+                "comments": "Name of the Resource Group where vNet is located"
+            },
+            "value": "enterRGNameforvNet"
+        },
+        "vnetId": {
+            "metadata": {
+                "comments": "Enter resourceID for vNet being used for vNet injection"
+            },
+            "value": "enterResourceIDforVnet"
+        },
+        "publicSubnetName": {
+            "metadata": {
+                "comments": "Provide name for existing SubNet for DB host subnet, if subnet is not in vNet it will be created and delegated to DB"
+            },
+            "value": "databricks-host"
+        },
+        "publicSubnetCIDR": {
+            "metadata": {
+                "comments": "Provide CIDR for publicsubnet (host vnet) example: 10.5.0.0/26"
+            },
+            "value": "xx.xx.x.x/xx"
+        },
+        "privateSubnetName": {
+            "metadata": {
+                "comments": "Provide name for existing SubNet for DB container subnet, if subnet is not in vNet it will be created and delegated to DB"
+            },
+            "value": "databricks-container"
+        },
+        "privateSubnetCIDR": {
+            "metadata": {
+                "comments": "Provide CIDR for privatesubnet (container vnet) example: 10.5.0.64/26"
+            },
+            "value": "xx.x.x.xx/xx"
+        }
+    }
+}
