@@ -1,0 +1,162 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspaceName": {
+            "metadata": {
+                "comments": "Names of your Synapse Analytics Workspace"
+            },
+            "value": "enterWorkspaceName"
+        },
+        "workspaceTags": {
+            "value": {
+                "tagName": "tagValue",
+                "tagName2": "tagValue2"
+            }
+        },
+        "autoSetAdminAccount": {
+            "metadata": {
+                "comments": "Auto Set the required SQL Admin account.  Default is true"
+            },
+            "value": true
+        },
+        "adminUsername": {
+            "metadata": {
+                "comments": "Set SQL Auth admin account if you are not auto setting it, cannot use reserved accounts like: admin, sys, dbo, master"
+            },
+            "value": ""
+        },
+        "adminPassword": {
+            "metadata": {
+                "comments": "Set SQL Auth admin password if you are not auto setting it"
+            },
+            "value": ""
+        },
+        "AADAdminName": {
+            "metadata": {
+                "comments": "AAD admin group name, this is the group/user used for AAD admin of Synapse"
+            },
+            "value": "Enter Name of AAD User or Group"
+        },
+        "AADAdminSID": {
+            "metadata": {
+                "comments": "SID for AAD group you will use as the AAD Admin. This can be found via AAD or PowerShell"
+            },
+            "value": "enter SID for User or Group"
+        },
+        "AADOnly": {
+            "metadata": {
+                "comments": "Set Workspace to AAD Only"
+            },
+            "value": true
+        },
+        "trustAzureServices": {
+            "metadata": {
+                "comments": "Add Firewall Rule to trust Azure Services"
+            },
+            "value": true
+        },
+        "createManagedPrivateEndpoint": {
+            "metadata": {
+                "comments": "Create Private Endpoint for Syanpse to connect to ADLS over Private Endpoint"
+            },
+            "value": false
+        },
+        "StorageAccountName": {
+            "metadata": {
+                "comments": "Names Storage Account - Data Lake"
+            },
+            "value": "enter Name of Storage Account"
+        },
+        "ContainerName": {
+            "metadata": {
+                "comments": "Names of Storage Account Container to Create"
+            },
+            "value": "Enter Name For DataLake Container"
+        },
+        "AccountType": {
+            "metadata": {
+                "comments": "Storage account type: Standard_LRS, Standard_GRS, Standard_RAGRS"
+            },
+            "value": "Standard_RAGRS"
+        },
+        "CreateVNetFirewall": {
+            "metadata": {
+                "comments": "Setup VNetFirewall Rule: true/false"
+            },
+            "value": false
+        },
+        "vNetRule": {
+            "metadata": {
+                "comments": "vNet Service end point, enter values for each firewall rule to create provide: vNetResourceGroup, vNetName, vNetSubNetName for each rule to create. The vNet/subnet needs to have storage service endpoint enabled. "
+            },
+            "value": [
+                {
+                    "vNetResourceGroup": "demo-core-vnet",
+                    "vNetName": "demo-core-vnet",
+                    "vNetSubNetName": "default"
+                }
+            ]
+        },
+        "CreateIpFirewallRule": {
+            "metadata": {
+                "comments": "Create IP Firewall Rule: true/false"
+            },
+            "value": false
+        },
+        "IpFirewallRule": {
+            "metadata": {
+                "comments": "List of IP addresses for additional IP firewall rules. Separated by a comma"
+            },
+            "value": [
+                "xx.xxx.xx.xx",
+                "xx.xx.xx.x/xx",
+                "xxx.xx.xxx.xxx"
+            ]
+        },
+        "FirewallExceptions": {
+            "metadata": {
+                "comments": "Firewall Exception Options you can use any one of the following as a single string:  Logging, Metrics, AzureServices"
+            },
+            "value": "Logging, Metrics, AzureServices"
+        },
+        "createFirewallAllServices": {
+            "metadata": {
+                "comments": "Setup Firewall Rule to Allow access from all Azure services: true/false"
+            },
+            "value": true
+        },
+        "CreateFirewallRangeRule": {
+            "metadata": {
+                "comments": "Setup Firewall Range Rule: true/false"
+            },
+            "value": true
+        },
+        "FirewallRangeRule": {
+            "metadata": {
+                "comments": "Firewall Range rule, create StartIpAddress and EndIpAddress for each range rule "
+            },
+            "value": [
+                {
+                    "Name": "TestRule",
+                    "StartIp":  "xx.xx.xxx.xx",
+                    "EndIp": "xx.xxx.xxx.xx"
+                }
+            ]
+        },
+        "sqlPool": {
+            "metadata": {
+                "comments": "Create and Set Tier of SQL Pool"
+            },
+            "value": [
+                {
+                    "poolName": "enter name of sql pool",
+                    "sku": {
+                        "name": "DW200c"
+                    },
+                    "dbCollation": "SQL_Latin1_General_CP1_CI_AS"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,341 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspaceName": {
+            "type": "string"
+        },
+        "workspaceTags": {
+            "type": "object"
+        },
+        "createManagedPrivateEndpoint": {
+            "type": "bool"
+        },
+        "autoSetAdminAccount": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": true
+        },
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "AADAdminName": {
+            "type": "string"
+        },
+        "AADAdminSID": {
+            "type": "string"
+        },
+        "AADOnly": {
+            "type": "bool"
+        },
+        "trustAzureServices": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": true
+        },
+
+        "StorageAccountName": {
+            "type": "string"
+        },
+        "storageRoleUniqueId": {
+            "type": "string",
+            "defaultValue": "[newGuid()]"
+        },
+        "AccountType": {
+            "type": "string",
+            "defaultValue": "Standard_ZRS",
+            "metadata": {
+                "comments": "LRS: Locally-redundant storage - Data is replicated within a single storage scale unit , ZRS: Zone-redundant storage - Data is replicated synchronously across three availability zones, GRS: Geo-redundant storage -Cross-regional replication to protect against region-wide unavailability, RAGRS: Read-access geo-redundant storage - Cross-regional replication with read access to the replica"
+            },
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_ZRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS",
+                "Premium_ZRS"
+            ]
+        },
+        "ContainerName": {
+            "type": "string",
+            "defaultValue": "latest"
+        },
+        "CreateVNetFirewall": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "vNetRule": {
+            "type": "array"
+        },
+        "CreateIpFirewallRule": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "IpFirewallRule": {
+            "type": "array"
+        },
+        "FirewallExceptions": {
+            "type": "string"
+        },
+        "createFirewallAllServices": {
+            "metadata": {
+                "comments": "Setup Firewall Rule to Allow access to Azure services: true/false"
+            },
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "CreateFirewallRangeRule": {
+            "type": "bool",
+            "allowedValues": [
+                true,
+                false
+            ],
+            "defaultValue": false
+        },
+        "FirewallRangeRule": {
+            "type": "array"
+        },
+        "sqlPool": {
+            "type": "array"
+        }
+    },
+
+    "functions": [],
+    "variables": {
+        "sqlAdmin": "[concat('sqladmin',uniqueString(resourceGroup().id,subscription().subscriptionId))]",
+        "sqlAdminPass": "[concat('P', base64ToString(base64(concat(uniqueString(resourceGroup().id,subscription().subscriptionId),deployment().name,guid(subscription().subscriptionId)))), 'z', '!')]",
+        "administratorLogin": "[if(parameters('autoSetAdminAccount'), variables('sqlAdmin'), parameters('adminUsername'))]",
+        "administratorLoginPassword": "[if(parameters('autoSetAdminAccount'), variables('sqlAdminPass'), parameters('adminPassword'))]",
+        "virtualNetworkRules": {
+            "copy": [
+                {
+                    "name": "vNetLoop",
+                    "count": "[length(parameters('vNetRule'))]",
+                    "input": {
+                        "id": "[resourceId(subscription().subscriptionId, parameters('vNetRule')[copyIndex('vNetLoop')].vNetResourceGroup, 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetRule')[copyIndex('vNetLoop')].vNetName, parameters('vNetRule')[copyIndex('vNetLoop')].vNetSubNetName)]",
+                        "action": "Allow",
+                        "state": "succeeded"
+                    }
+                }
+            ]
+        },
+        "ipRules": {
+            "copy": [
+                {
+                    "name": "IPLoop",
+                    "count": "[length(parameters('IpFirewallRule'))]",
+                    "input": {
+                        "value": "[parameters('IpFirewallRule')[copyIndex('IPLoop')]]",
+                        "action": "Allow"
+                    }
+                }
+            ]
+        },
+        "varStorageName": "[concat(toLower(parameters('StorageAccountName')), uniqueString(resourceGroup().id))]",
+        "ADLSStorageAccountName": "[if(greater(length(variables('varStorageName')),24), substring(variables('varStorageName'),0,23),variables('varStorageName'))]",
+        "storageBlobDataContributorRoleID": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+        "defaultDataLakeStorageAccountUrl": "[concat('https://', variables('ADLSStorageAccountName'), '.dfs.core.windows.net')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2021-08-01",
+            "name": "[variables('ADLSStorageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "[parameters('AccountType')]",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "isHnsEnabled": true,
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot",
+                "networkAcls": {
+                    "bypass": "[parameters('FirewallExceptions')]",
+                    "virtualNetworkRules": "[if(parameters('CreateVNetFirewall'), variables('virtualNetworkRules').vNetLoop,'')]",
+                    "ipRules": "[if(parameters('CreateIpFirewallRule'), variables('ipRules').IPLoop,'')]",
+                    "defaultAction": "Deny"
+                }
+            },
+            "dependsOn": [
+            ],
+            "resources": [
+                {
+                    "comments": "Create Storage account Containers",
+                    "type": "blobServices/containers",
+                    "name": "[concat('default/', parameters('ContainerName'))]",
+                    "dependsOn": [
+                        "[variables('ADLSStorageAccountName')]"
+                    ],
+                    "apiVersion": "2021-08-01",
+                    "properties": {
+                        "publicAccess": "Container"
+                    }
+                }
+            ]
+        },
+        {
+            "comments": "Set Role Access for Workspace to the Storage Account",
+            "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
+            "apiVersion": "2018-09-01-preview",
+            "name": "[concat(variables('ADLSStorageAccountName'), '/Microsoft.Authorization/',  guid(concat(resourceGroup().id, '/', variables('storageBlobDataContributorRoleID'), '/', parameters('workspaceName'), '/', parameters('storageRoleUniqueId'))))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleID'))]",
+                "principalId": "[reference(concat('Microsoft.Synapse/workspaces/', parameters('workspaceName')), '2021-06-01', 'Full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+        {
+            "comments": "Deployment for Synapse Workspace",
+            "type": "Microsoft.Synapse/workspaces",
+            "apiVersion": "2021-06-01",
+            "name": "[parameters('workspaceName')]",
+            "location": "[resourceGroup().location]",
+            "tags": "[parameters('workspaceTags')]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "connectivityEndpoints": {},
+                "cspWorkspaceAdminProperties": {
+                    "initialWorkspaceAdminObjectId": "string"
+                },
+                "defaultDataLakeStorage": {
+                    "accountUrl": "[variables('defaultDataLakeStorageAccountUrl')]",
+                    "createManagedPrivateEndpoint": "[parameters('createManagedPrivateEndpoint')]",
+                    "filesystem": "[parameters('ContainerName')]",
+                    "resourceId": "[resourceId('Microsoft.Storage/storageAccounts',variables('ADLSStorageAccountName'))]"
+                },
+
+                "managedVirtualNetwork": "default",
+                "publicNetworkAccess": "Enabled",
+                "purviewConfiguration": {
+                    "purviewResourceId": ""
+                },
+                "sqlAdministratorLogin": "[variables('administratorLogin')]",
+                "sqlAdministratorLoginPassword": "[variables('administratorLoginPassword')]"
+            },
+            "resources": [
+                {
+                    "name": "[concat( parameters('workspaceName'), '/', 'AllowAllWindowsAzureIps')]",
+                    "condition": "[parameters('createFirewallAllServices')]",
+                    "type": "Microsoft.Synapse/workspaces/firewallRules",
+                    "apiVersion": "2021-06-01",
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
+                    },
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaceName'))]"
+                    ]
+                }
+            ],
+            "dependsOn": [
+                "[variables('ADLSStorageAccountName')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Synapse/workspaces/azureADOnlyAuthentications",
+            "apiVersion": "2021-06-01",
+            "name": "[concat(parameters('workspaceName'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces', parameters('workspaceName'))]"
+            ],
+            "properties": {
+                "azureADOnlyAuthentication": "[parameters('AADOnly')]"
+            }
+        },
+        {
+            "comments": "Set Azure AD Server Admin, recommend an AAD group. Can use PowerShell Get-AzureADUser from AzureAD module to find SID",
+            "type": "Microsoft.Synapse/workspaces/administrators",
+            "name": "[concat(parameters('workspaceName'), '/activeDirectory')]",
+            "apiVersion": "2021-06-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+            ],
+            "properties": {
+                "administratorType": "ActiveDirectory",
+                "login": "[parameters('AADAdminName')]",
+                "sid": "[parameters('AADAdminSID')]",
+                "tenantId": "[subscription().tenantId]"
+            }
+        },
+        {
+            "name": "[concat(parameters('workspaceName'), '/', parameters('FirewallRangeRule')[copyIndex()].Name)]",
+            "condition": "[parameters('CreateIpFirewallRule')]",
+            "copy": {
+                "name": "IpRangeCopy",
+                "count": "[length(parameters('FirewallRangeRule'))]"
+            },
+            "type": "Microsoft.Synapse/workspaces/firewallRules",
+            "apiVersion": "2021-06-01",
+            "properties": {
+                "startIpAddress": "[parameters('FirewallRangeRule')[copyIndex()].StartIp]",
+                "endIpAddress": "[parameters('FirewallRangeRule')[copyIndex()].EndIp]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+            ]
+        },
+        {
+            "comments": "Create SQL Pool",
+            "type": "Microsoft.Synapse/workspaces/sqlPools",
+            "name": "[concat(parameters('workspaceName'), '/', parameters('sqlPool')[copyIndex()].poolName)]",
+            "apiVersion": "2021-06-01",
+            "location": "[resourceGroup().location]",
+            "sku": "[parameters('sqlPool')[copyIndex()].sku]",
+            "properties": {
+                "createMode": "Default",
+                "collation": "[parameters('sqlPool')[copyIndex()].dbCollation]"
+            },
+            "copy": {
+                "name": "databasecopy",
+                "count": "[length(parameters('sqlPool'))]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+            ],
+            "resources": [
+                
+            ]
+        }
+
+    ],
+    "outputs": {}
+}
